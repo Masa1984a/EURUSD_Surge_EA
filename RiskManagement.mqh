@@ -228,36 +228,46 @@ void CheckAndExecutePartialClose(string symbol)
         
         if(OrderSelect(ticket, SELECT_BY_TICKET))
         {
-            // 部分決済するロットサイズを計算
-            double closeVolume = OrderLots() * (PartialClosePercent / 100.0);
-            closeVolume = NormalizeDouble(closeVolume, 2);
-            
-            // 最小ロットサイズを確認
-            double minLot = MarketInfo(symbol, MODE_MINLOT);
-            if(closeVolume >= minLot)
+            // 約定済みポジションかどうかチェック (買いまたは売りポジションのみ処理)
+            if(OrderType() == OP_BUY || OrderType() == OP_SELL)
             {
-                // 部分決済を実行
-                bool result = false;
-                if(g_PartialCloseDirection > 0) // ロング
-                {
-                    result = OrderClose(ticket, closeVolume, Bid, 3, Green);
-                }
-                else // ショート
-                {
-                    result = OrderClose(ticket, closeVolume, Ask, 3, Red);
-                }
+                // 部分決済するロットサイズを計算
+                double closeVolume = OrderLots() * (PartialClosePercent / 100.0);
+                closeVolume = NormalizeDouble(closeVolume, 2);
                 
-                if(result)
+                // 最小ロットサイズを確認
+                double minLot = MarketInfo(symbol, MODE_MINLOT);
+                if(closeVolume >= minLot)
                 {
-                    LogInfo("部分決済実行: チケット=" + IntegerToString(ticket) + 
-                           ", ロット=" + DoubleToString(closeVolume, 2));
+                    // 部分決済を実行
+                    bool result = false;
+                    if(OrderType() == OP_BUY) // ロング
+                    {
+                        result = OrderClose(ticket, closeVolume, Bid, 3, Green);
+                    }
+                    else if(OrderType() == OP_SELL) // ショート
+                    {
+                        result = OrderClose(ticket, closeVolume, Ask, 3, Red);
+                    }
                     
-                    g_PartialCloseSet = false; // 部分決済フラグをリセット
+                    if(result)
+                    {
+                        LogInfo("部分決済実行: チケット=" + IntegerToString(ticket) + 
+                               ", ロット=" + DoubleToString(closeVolume, 2));
+                        
+                        g_PartialCloseSet = false; // 部分決済フラグをリセット
+                    }
+                    else
+                    {
+                        LogError("部分決済エラー: " + IntegerToString(GetLastError()));
+                    }
                 }
-                else
-                {
-                    LogError("部分決済エラー: " + IntegerToString(GetLastError()));
-                }
+            }
+            else
+            {
+                // 約定済みポジションではない場合
+                LogInfo("注文 #" + IntegerToString(ticket) + " は約定済みポジションではないため部分決済をスキップします");
+                g_PartialCloseSet = false; // 部分決済フラグをリセット
             }
         }
     }
