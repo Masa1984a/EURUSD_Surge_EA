@@ -153,19 +153,6 @@ double CalculateFibonacciLevel(double surgeStartPrice, double surgeEndPrice, dou
     return retracementLevel;
 }
 
-// 調整が有効かどうかをチェック
-bool IsValidRetracement(double surgeStartPrice, double surgeEndPrice, double currentPrice, int direction)
-{
-    if(!UseFibonacciRetracement)
-    {
-        return true; // フィボナッチリトレースメントを使用しない場合は常にtrue
-    }
-    
-    double retracementLevel = CalculateFibonacciLevel(surgeStartPrice, surgeEndPrice, currentPrice, direction);
-    
-    // 指定されたフィボナッチレベルの範囲内かどうかをチェック
-    return (retracementLevel >= FiboMinLevel && retracementLevel <= FiboMaxLevel);
-}
 
 // 調整が完了したかどうかをチェック
 bool IsAdjustmentComplete(string symbol, int timeframe, int adjustmentCount, int direction)
@@ -213,12 +200,6 @@ bool DetectReentryPoint(string symbol, int timeframe, int direction, double surg
 {
     // 現在の価格を取得
     double currentPrice = (direction > 0) ? Ask : Bid;
-    
-    // 調整が有効かどうかをチェック
-    if(!IsValidRetracement(surgeStartPrice, surgeEndPrice, currentPrice, direction))
-    {
-        return false;
-    }
     
     // 複数指標による確認
     if(!ConfirmEntrySignal(symbol, timeframe, direction))

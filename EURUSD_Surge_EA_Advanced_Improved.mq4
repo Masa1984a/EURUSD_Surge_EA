@@ -36,9 +36,6 @@ extern double BodyToTotalRatio = 40.0;        // ローソク足の実体/全体
 
 // エントリー設定
 extern string Entry_Settings = "===== エントリー設定 =====";
-extern bool   UseFibonacciRetracement = false; // フィボナッチリトレースメントを使用する
-extern double FiboMinLevel = 0.236;           // 最小リトレースメントレベル
-extern double FiboMaxLevel = 0.382;           // 最大リトレースメントレベル
 extern int    AdjustmentCandlesMin = 1;       // 調整足の最小数
 extern int    AdjustmentCandlesMax = 7;       // 調整足の最大数 (旧:5)
 extern double EntryPullbackPercent = 40.0;    // エントリー引き付け率（%） (旧:50.0)
