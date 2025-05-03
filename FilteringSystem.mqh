@@ -24,25 +24,9 @@ bool ShouldTradeInCurrentMarket(string symbol, int timeframe)
         return false;
     }
     
-    // ボラティリティが過剰に高い場合も取引を控える
-    if(IsMarketTooVolatile(symbol, timeframe))
-    {
-        LogInfo("過剰なボラティリティを検出: 取引を見送ります");
-        return false;
-    }
-    
     return true;
 }
 
-// 市場のボラティリティが過剰に高いかどうかをチェック
-bool IsMarketTooVolatile(string symbol, int timeframe)
-{
-    double currentVolatility = GetCurrentVolatility(symbol, timeframe);
-    double avgVolatility = GetAveragePastVolatility(symbol, timeframe, VolatilityPeriod);
-    
-    // 平均の5倍以上のボラティリティは過剰と判断
-    return (currentVolatility > avgVolatility * 5.0);
-}
 
 
 
