@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2025"
 #property link      ""
-#property version   "2.10"
+#property version   "2.20"
 #property strict
 
 // 外部ファイルのインクルード
@@ -132,7 +132,7 @@ int OnInit()
     ResetDailyCounters();
     
     // ブローカー情報を出力
-    LogInfo("EURUSD Surge EA Advanced Improved 初期化完了 - V2.10");
+    LogInfo("EURUSD Surge EA Advanced Improved 初期化完了 - V2.20");
     LogInfo("ブローカー情報:");
     LogInfo("最小ストップロス距離: " + DoubleToString(MarketInfo(g_Symbol, MODE_STOPLEVEL), 0) + " ポイント");
     LogInfo("ティック値: " + DoubleToString(MarketInfo(g_Symbol, MODE_TICKVALUE), 5));
@@ -265,6 +265,13 @@ void OnTick()
                     // 買いトレード用のストップロス調整
                     double adjustedStopLoss = CalculateDynamicStopLoss(g_Symbol, MainTimeFrame, g_SurgeDirection, entryPrice, g_SurgeStartPrice);
                     
+                    // SLが0の場合は取引を見送る（ZigZagポイントが見つからず、フォールバックも無効の場合）
+                    if(adjustedStopLoss == 0)
+                    {
+                        LogWarning("ロング注文見送り: 有効なストップロス価格が計算できませんでした");
+                        return;
+                    }
+                    
                     ticket = SendOrderWithRetry(OP_BUYLIMIT, lotSize, entryPrice, 3, adjustedStopLoss, takeProfit, 
                                               "EURUSD Surge EA Advanced Improved", 0, 0, Green);
                     
@@ -297,6 +304,13 @@ void OnTick()
                 {
                     // 売りトレード用のストップロス調整
                     double adjustedStopLoss = CalculateDynamicStopLoss(g_Symbol, MainTimeFrame, g_SurgeDirection, entryPrice, g_SurgeStartPrice);
+                    
+                    // SLが0の場合は取引を見送る（ZigZagポイントが見つからず、フォールバックも無効の場合）
+                    if(adjustedStopLoss == 0)
+                    {
+                        LogWarning("ショート注文見送り: 有効なストップロス価格が計算できませんでした");
+                        return;
+                    }
                     
                     ticket = SendOrderWithRetry(OP_SELLLIMIT, lotSize, entryPrice, 3, adjustedStopLoss, takeProfit, 
                                               "EURUSD Surge EA Advanced Improved", 0, 0, Red);

@@ -14,6 +14,16 @@
 extern int StopLossPips = 50;         // ストップロス距離（ピップ）
 extern double StopLossAdjustment = 1.0; // ストップロス調整係数
 
+// ZigZagベースのストップロス設定
+extern bool UseZigZagStopLoss = true;           // ZigZagベースSLを使用する
+extern int ZigZagTimeFrame = PERIOD_M1;         // ZigZag計算に使用する時間足
+extern int ZigZagDepth = 12;                    // ZigZagの ExtDepth パラメータ
+extern int ZigZagDeviation = 5;                 // ZigZagの ExtDeviation パラメータ
+extern int ZigZagBackstep = 3;                  // ZigZagの ExtBackstep パラメータ
+extern double ZigZagBufferPercent = 15.0;       // ZigZagポイントとエントリー価格の距離に対するバッファ率（%）
+extern int ZigZagMaxLookback = 100;             // ZigZagポイントを探す最大遡及バー数
+extern bool ZigZagFallbackToDefaultSL = true;   // ZigZagポイントが見つからない場合にデフォルトSLロジックを使用する
+
 //+------------------------------------------------------------------+
 //| ポジションサイジング関連の関数                                     |
 //+------------------------------------------------------------------+
@@ -66,7 +76,50 @@ double CalculateDynamicStopLoss(string symbol, int timeframe, int direction, dou
 {
     double stopLoss = 0;
     
-    if(UseATR)
+    // ZigZagベースのストップロス計算が有効で、それを使用するかどうか
+    if(UseZigZagStopLoss)
+    {
+        // ZigZagに基づいたストップロス計算
+        stopLoss = GetZigZagBasedStopLoss(symbol, direction, entryPrice);
+        
+        // ZigZagポイントが見つからないか、計算結果が不正な場合
+        if(stopLoss == 0 && ZigZagFallbackToDefaultSL)
+        {
+            LogInfo("ZigZagベースのSLがフォールバックします。代替SL計算を使用します。");
+            
+            // 代替計算にフォールバック
+            if(UseATR)
+            {
+                // ATRに基づくストップロス
+                stopLoss = GetATRBasedStopLoss(symbol, timeframe, direction, entryPrice);
+            }
+            else
+            {
+                // 急騰・急落の起点に基づくストップロス
+                double pipPoint = Point;
+                if(Digits == 5 || Digits == 3)
+                {
+                    pipPoint = Point * 10;
+                }
+                
+                if(direction > 0) // ロング
+                {
+                    stopLoss = NormalizeDouble(surgeStartPrice - (StopLossPips * StopLossAdjustment * pipPoint), Digits);
+                }
+                else // ショート
+                {
+                    stopLoss = NormalizeDouble(surgeStartPrice + (StopLossPips * StopLossAdjustment * pipPoint), Digits);
+                }
+            }
+        }
+        else if(stopLoss == 0 && !ZigZagFallbackToDefaultSL)
+        {
+            // ZigZagに基づくSLが見つからず、フォールバックしない設定の場合
+            LogWarning("ZigZagベースのSLが計算できず、フォールバックが無効です。注文は見送られます。");
+            return 0; // 0を返すことで呼び出し元で処理を判断できる
+        }
+    }
+    else if(UseATR)
     {
         // ATRに基づくストップロス
         stopLoss = GetATRBasedStopLoss(symbol, timeframe, direction, entryPrice);
@@ -99,7 +152,7 @@ double CalculateDynamicStopLoss(string symbol, int timeframe, int direction, dou
     double currentStopDistance = MathAbs(entryPrice - stopLoss) / Point;
     
     // 最小ストップロス距離より近い場合は調整
-    if(currentStopDistance < safeStopDistance)
+    if(stopLoss != 0 && currentStopDistance < safeStopDistance)
     {
         LogWarning("警告: ストップロス距離が不足しています: " + DoubleToString(currentStopDistance, 0) + 
                   " < " + IntegerToString(safeStopDistance));
@@ -133,6 +186,139 @@ double GetATRBasedStopLoss(string symbol, int timeframe, int direction, double e
     {
         return NormalizeDouble(entryPrice + stopDistance, Digits);
     }
+}
+
+// ZigZagに基づくストップロスを計算
+double GetZigZagBasedStopLoss(string symbol, int direction, double entryPrice)
+{
+    datetime zzTime = 0;
+    double zzPrice = 0;
+    double stopLoss = 0;
+    
+    // ZigZagポイントを探す
+    bool foundZigZag = FindRecentZigZagPoint(symbol, ZigZagTimeFrame, direction, zzPrice, zzTime);
+    
+    if(foundZigZag && zzPrice > 0)
+    {
+        // エントリー価格とZigZagポイントの距離を計算
+        double distance = MathAbs(entryPrice - zzPrice);
+        
+        // バッファ値を計算（距離の指定パーセンテージ）
+        double bufferValue = distance * (ZigZagBufferPercent / 100.0);
+        
+        // SL価格を決定
+        if(direction > 0) // ロング（買い）
+        {
+            stopLoss = NormalizeDouble(zzPrice - bufferValue, Digits);
+            
+            // 念のため：SLがエントリー価格より大きくないことを確認（不正なSL）
+            if(stopLoss >= entryPrice)
+            {
+                LogWarning("警告: ZigZagベースのSLがエントリー価格を上回っています（ロング）。SL: " + 
+                          DoubleToString(stopLoss, Digits) + ", エントリー: " + DoubleToString(entryPrice, Digits));
+                return 0; // 不正なSLなので0を返してフォールバック処理をトリガー
+            }
+        }
+        else // ショート（売り）
+        {
+            stopLoss = NormalizeDouble(zzPrice + bufferValue, Digits);
+            
+            // 念のため：SLがエントリー価格より小さくないことを確認（不正なSL）
+            if(stopLoss <= entryPrice)
+            {
+                LogWarning("警告: ZigZagベースのSLがエントリー価格を下回っています（ショート）。SL: " + 
+                          DoubleToString(stopLoss, Digits) + ", エントリー: " + DoubleToString(entryPrice, Digits));
+                return 0; // 不正なSLなので0を返してフォールバック処理をトリガー
+            }
+        }
+        
+        LogInfo("ZigZagベースのSL計算: ZigZagポイント=" + DoubleToString(zzPrice, Digits) + 
+               ", 距離=" + DoubleToString(distance, Digits) + 
+               ", バッファ値=" + DoubleToString(bufferValue, Digits) + 
+               ", SL=" + DoubleToString(stopLoss, Digits));
+        
+        return stopLoss;
+    }
+    
+    // ZigZagポイントが見つからない場合
+    LogWarning("ZigZagポイントが見つかりませんでした。代替SLにフォールバックします。");
+    return 0; // 見つからない場合は0を返してフォールバック処理をトリガー
+}
+
+// 直近のZigZagポイント（高値/安値）を探す
+bool FindRecentZigZagPoint(string symbol, int timeframe, int direction, double &zzPoint, datetime &zzTime)
+{
+    // ZigZagバッファの配列
+    double zigzagBuffer[];
+    datetime timeBuffer[];
+    
+    // 配列サイズを設定
+    ArrayResize(zigzagBuffer, ZigZagMaxLookback);
+    ArrayResize(timeBuffer, ZigZagMaxLookback);
+    ArrayInitialize(zigzagBuffer, 0.0);
+    
+    // ZigZagの計算
+    int handle = iCustom(symbol, timeframe, "ZigZag", ZigZagDepth, ZigZagDeviation, ZigZagBackstep);
+    
+    if(handle == INVALID_HANDLE)
+    {
+        LogError("ZigZagインジケーターのハンドルを取得できませんでした。エラー: " + IntegerToString(GetLastError()));
+        return false;
+    }
+    
+    // 時間配列を作成
+    for(int i = 0; i < ZigZagMaxLookback; i++)
+    {
+        timeBuffer[i] = iTime(symbol, timeframe, i);
+        
+        // ZigZagの値を取得（バッファ0がZigZag値）
+        double value = iCustom(symbol, timeframe, "ZigZag", ZigZagDepth, ZigZagDeviation, ZigZagBackstep, 0, i);
+        zigzagBuffer[i] = value;
+    }
+    
+    // 方向に合わせて適切なZigZagポイントを探す
+    if(direction > 0) // ロング（買い）の場合は直近の安値（Trough）を探す
+    {
+        for(int i = 1; i < ZigZagMaxLookback - 1; i++)
+        {
+            // ZigZagの値が0でなく、両隣の値より小さい場合は安値と判断
+            if(zigzagBuffer[i] != 0 && 
+               (zigzagBuffer[i-1] == 0 || zigzagBuffer[i] < zigzagBuffer[i-1]) && 
+               (zigzagBuffer[i+1] == 0 || zigzagBuffer[i] < zigzagBuffer[i+1]))
+            {
+                zzPoint = zigzagBuffer[i];
+                zzTime = timeBuffer[i];
+                
+                LogInfo("ロング用ZigZag安値検出: 価格=" + DoubleToString(zzPoint, Digits) + 
+                       ", 時間=" + TimeToString(zzTime, TIME_DATE|TIME_MINUTES));
+                
+                return true;
+            }
+        }
+    }
+    else // ショート（売り）の場合は直近の高値（Peak）を探す
+    {
+        for(int i = 1; i < ZigZagMaxLookback - 1; i++)
+        {
+            // ZigZagの値が0でなく、両隣の値より大きい場合は高値と判断
+            if(zigzagBuffer[i] != 0 && 
+               (zigzagBuffer[i-1] == 0 || zigzagBuffer[i] > zigzagBuffer[i-1]) && 
+               (zigzagBuffer[i+1] == 0 || zigzagBuffer[i] > zigzagBuffer[i+1]))
+            {
+                zzPoint = zigzagBuffer[i];
+                zzTime = timeBuffer[i];
+                
+                LogInfo("ショート用ZigZag高値検出: 価格=" + DoubleToString(zzPoint, Digits) + 
+                       ", 時間=" + TimeToString(zzTime, TIME_DATE|TIME_MINUTES));
+                
+                return true;
+            }
+        }
+    }
+    
+    // 見つからなかった場合
+    LogWarning("適切なZigZagポイントが" + IntegerToString(ZigZagMaxLookback) + "バー以内に見つかりませんでした。");
+    return false;
 }
 
 //+------------------------------------------------------------------+
