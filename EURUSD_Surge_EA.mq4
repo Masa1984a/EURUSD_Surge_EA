@@ -47,10 +47,7 @@ extern double RiskRewardRatio = 2.0;          // リスクリワード比
 extern double MaxRiskPercent = 2.0;           // 総資産に対する最大リスク率（％）
 extern bool   UsePartialClose = true;         // 部分決済を使用する
 extern double PartialClosePercent = 60.0;     // 部分決済の割合（%） 
-extern double PartialCloseTrigger = 0.4;      // 部分決済トリガー（リスクの何倍で部分決済するか）
-extern bool   UseTrailingStop = true;         // トレーリングストップを使用する
-extern double TrailingTrigger = 0.8;          // トレーリング開始トリガー（リスクの何倍で開始するか）
-extern double TrailingDistance = 0.5;         // トレーリング距離（リスクの何倍の距離を維持するか）
+extern double PartialCloseTrigger = 1.0;      // 部分決済トリガー（リスクの何倍で部分決済するか）
 
 // フィルタリング設定
 extern string Filter_Settings = "===== フィルタリング設定 =====";
@@ -178,12 +175,6 @@ void OnTick()
     if(UsePartialClose)
     {
         CheckAndExecutePartialClose(g_Symbol);
-    }
-    
-    // トレーリングストップの管理
-    if(UseTrailingStop)
-    {
-        ManageTrailingStop(g_Symbol);
     }
     
     // 取引時間外なら処理しない
