@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
-//|                                                 Utilities.mqh |
-//|                                                                   |
-//|                                                                   |
+//|                                                    Utilities.mqh |
+//|                                                                  |
+//|                                                                  |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2025"
+#property copyright "Copyright © 2025 Massan All Rights Reserved."
 #property strict
 
 //+------------------------------------------------------------------+
@@ -50,15 +50,6 @@ bool IsNewBar(string symbol, int timeframe)
 //+------------------------------------------------------------------+
 //| ログ機能関連の関数                                                |
 //+------------------------------------------------------------------+
-
-// デバッグログを出力
-void LogDebug(string message)
-{
-    if(DebugMode)
-    {
-        Print("[DEBUG] " + TimeToString(TimeCurrent(), TIME_DATE|TIME_SECONDS) + ": " + message);
-    }
-}
 
 // 情報ログを出力
 void LogInfo(string message)

@@ -1,11 +1,13 @@
 //+------------------------------------------------------------------+
-//|                                  EURUSD_Surge_EA_Advanced_Improved.mq4 |
-//|                                                                     |
-//|                                                                     |
+//|                                              EURUSD_Surge_EA.mq4 |
+//|                                                                  |
+//|                                                                  |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2025"
-#property link      ""
-#property version   "2.20"
+#property copyright "Copyright © 2025 Massan All Rights Reserved."
+#property link      "https://github.com/Masa1984a/EURUSD_Surge_EA"
+#property version   "0.01"
+#property description "EURUSD専用の急騰急落検出型EAで、価格サージを利用した高精度エントリーを実現。ATR・ZigZagベースの動的SL、リスク管理機能搭載。プライスアクションにより、相場状況に応じた取引を行う。時間帯制限機能で効率的な取引が可能。"
+#property author    "Massan"
 #property strict
 
 // 外部ファイルのインクルード

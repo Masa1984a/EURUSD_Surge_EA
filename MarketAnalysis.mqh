@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
-//|                                                MarketAnalysis.mqh |
-//|                                                                   |
-//|                                                                   |
+//|                                               MarketAnalysis.mqh |
+//|                                                                  |
+//|                                                                  |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2025"
+#property copyright "Copyright © 2025 Massan All Rights Reserved."
 #property strict
 
 //+------------------------------------------------------------------+

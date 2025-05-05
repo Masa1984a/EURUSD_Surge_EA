@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                              EntryManagement.mqh |
-//|                                                                   |
-//|                                                                   |
+//|                                                                  |
+//|                                                                  |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2025"
+#property copyright "Copyright © 2025 Massan All Rights Reserved."
 #property strict
 
 //+------------------------------------------------------------------+
@@ -129,29 +129,6 @@ bool IsValidCandlePattern(string symbol, int timeframe)
 //+------------------------------------------------------------------+
 //| 調整局面分析関連の関数                                            |
 //+------------------------------------------------------------------+
-
-// フィボナッチリトレースメントレベルを計算
-double CalculateFibonacciLevel(double surgeStartPrice, double surgeEndPrice, double currentPrice, int direction)
-{
-    double surgeRange = MathAbs(surgeEndPrice - surgeStartPrice);
-    double retracementLevel = 0;
-    
-    if(surgeRange == 0)
-    {
-        return 0;
-    }
-    
-    if(direction > 0) // 上昇後の調整
-    {
-        retracementLevel = (surgeEndPrice - currentPrice) / surgeRange;
-    }
-    else // 下降後の調整
-    {
-        retracementLevel = (currentPrice - surgeEndPrice) / surgeRange;
-    }
-    
-    return retracementLevel;
-}
 
 
 // 調整が完了したかどうかをチェック
