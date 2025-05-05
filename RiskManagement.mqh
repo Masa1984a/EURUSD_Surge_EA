@@ -258,7 +258,7 @@ bool FindRecentZigZagPoint(string symbol, int timeframe, int direction, double &
     ArrayInitialize(zigzagBuffer, 0.0);
     
     // ZigZagの計算
-    int handle = iCustom(symbol, timeframe, "ZigZag", ZigZagDepth, ZigZagDeviation, ZigZagBackstep);
+    int handle = (int)iCustom(symbol, timeframe, "ZigZag", ZigZagDepth, ZigZagDeviation, ZigZagBackstep);
     
     if(handle == INVALID_HANDLE)
     {

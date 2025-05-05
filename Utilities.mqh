@@ -156,7 +156,7 @@ bool HandleOrderError(int errorCode)
 //+------------------------------------------------------------------+
 
 // 注文送信（再試行ロジック付き）
-int SendOrderWithRetry(int type, double lots, double price, double slippage, double stopLoss, double takeProfit, 
+int SendOrderWithRetry(int type, double lots, double price, int slippage, double stopLoss, double takeProfit, 
                       string comment, int magic, datetime expiration, color arrow_color)
 {
     int ticket = -1;
@@ -165,7 +165,7 @@ int SendOrderWithRetry(int type, double lots, double price, double slippage, dou
     
     for(int i = 0; i < retries; i++)
     {
-        ticket = OrderSend(Symbol(), type, lots, price, slippage, stopLoss, takeProfit, comment, magic, expiration, arrow_color);
+        ticket = OrderSend(Symbol(), type, lots, price, slippage, stopLoss, takeProfit, commsent, magic, expiration, arrow_color);
         
         if(ticket > 0)
         {
