@@ -156,7 +156,7 @@ int SendOrderWithRetry(int type, double lots, double price, int slippage, double
     
     for(int i = 0; i < retries; i++)
     {
-        ticket = OrderSend(Symbol(), type, lots, price, slippage, stopLoss, takeProfit, commsent, magic, expiration, arrow_color);
+        ticket = OrderSend(Symbol(), type, lots, price, slippage, stopLoss, takeProfit, comment, magic, expiration, arrow_color);
         
         if(ticket > 0)
         {
