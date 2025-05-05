@@ -76,10 +76,6 @@ extern int    FORCE_CLOSE_HOUR = 23;          // 強制決済時間（時）
 extern int    FORCE_CLOSE_MINUTE = 30;        // 強制決済時間（分）
 extern int    PendingOrderTimeout = 120;      // 指値注文の有効時間（分） (旧:60)
 
-// デバッグ設定
-extern string Debug_Settings = "===== デバッグ設定 =====";
-extern bool   DebugMode = false;              // デバッグモード
-
 // グローバル変数
 string g_Symbol = "EURUSD";                   // 対象通貨ペア
 int g_TodayTrades = 0;                        // 今日の取引回数
