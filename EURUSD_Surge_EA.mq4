@@ -31,27 +31,27 @@ extern int    TrendTimeFrame = PERIOD_M15;    // トレンド確認用時間足
 extern string Volatility_Settings = "===== ボラティリティ設定 =====";
 extern bool   UseATR = true;                  // ATRを使用する
 extern int    ATRPeriod = 14;                 // ATR計算期間
-extern double ATRMultiplier = 1.2;            // ATR乗数 (旧:1.5)
+extern double ATRMultiplier = 1.2;            // ATR乗数
 extern int    VolatilityPeriod = 50;          // ボラティリティ計算期間（ATR未使用時）
-extern double VolatilityMultiplier = 2.0;     // 平均ボラティリティの何倍を急騰/急落とするか (旧:2.5)
-extern double BodyToTotalRatio = 40.0;        // ローソク足の実体/全体比率（%） (旧:50.0)
+extern double VolatilityMultiplier = 2.0;     // 平均ボラティリティの何倍を急騰/急落とするか
+extern double BodyToTotalRatio = 40.0;        // ローソク足の実体/全体比率（%）
 
 // エントリー設定
 extern string Entry_Settings = "===== エントリー設定 =====";
 extern int    AdjustmentCandlesMin = 1;       // 調整足の最小数
-extern int    AdjustmentCandlesMax = 7;       // 調整足の最大数 (旧:5)
-extern double EntryPullbackPercent = 40.0;    // エントリー引き付け率（%） (旧:50.0)
+extern int    AdjustmentCandlesMax = 7;       // 調整足の最大数 
+extern double EntryPullbackPercent = 40.0;    // エントリー引き付け率（%） 
 
 // リスク管理設定
 extern string Risk_Settings = "===== リスク管理設定 =====";
-extern double RiskRewardRatio = 2.0;          // リスクリワード比 (旧:1.5)
+extern double RiskRewardRatio = 2.0;          // リスクリワード比 
 extern double MaxRiskPercent = 2.0;           // 総資産に対する最大リスク率（％）
 extern bool   UsePartialClose = true;         // 部分決済を使用する
-extern double PartialClosePercent = 60.0;     // 部分決済の割合（%） (旧:50.0)
-extern double PartialCloseTrigger = 0.4;      // 部分決済トリガー（リスクの何倍で部分決済するか） (旧:0.5)
+extern double PartialClosePercent = 60.0;     // 部分決済の割合（%） 
+extern double PartialCloseTrigger = 0.4;      // 部分決済トリガー（リスクの何倍で部分決済するか）
 extern bool   UseTrailingStop = true;         // トレーリングストップを使用する
-extern double TrailingTrigger = 0.8;          // トレーリング開始トリガー（リスクの何倍で開始するか） (旧:1.0)
-extern double TrailingDistance = 0.5;         // トレーリング距離（リスクの何倍の距離を維持するか） (旧:0.7)
+extern double TrailingTrigger = 0.8;          // トレーリング開始トリガー（リスクの何倍で開始するか）
+extern double TrailingDistance = 0.5;         // トレーリング距離（リスクの何倍の距離を維持するか）
 
 // フィルタリング設定
 extern string Filter_Settings = "===== フィルタリング設定 =====";
