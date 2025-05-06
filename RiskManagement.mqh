@@ -21,7 +21,7 @@ extern int ZigZagDepth = 12;                    // ZigZagの ExtDepth パラメ�
 extern int ZigZagDeviation = 5;                 // ZigZagの ExtDeviation パラメータ
 extern int ZigZagBackstep = 3;                  // ZigZagの ExtBackstep パラメータ
 extern double ZigZagBufferPercent = 15.0;       // ZigZagポイントとエントリー価格の距離に対するバッファ率（%）
-extern int ZigZagMaxLookback = 100;             // ZigZagポイントを探す最大遡及バー数
+extern int ZigZagMaxLookback = 200;             // ZigZagポイントを探す最大遡及バー数
 extern bool ZigZagFallbackToDefaultSL = true;   // ZigZagポイントが見つからない場合にデフォルトSLロジックを使用する
 
 //+------------------------------------------------------------------+
@@ -245,80 +245,120 @@ double GetZigZagBasedStopLoss(string symbol, int direction, double entryPrice)
     return 0; // 見つからない場合は0を返してフォールバック処理をトリガー
 }
 
+//+------------------------------------------------------------------+
+//| ヘルパー関数：指定インデックスより過去(インデックス大)の非ゼロ値を探す |
+//+------------------------------------------------------------------+
+double FindPreviousNonZeroValue(int startIndex, const double &buffer[], int bufferSize)
+{
+   // startIndex+1 から bufferSize-1 まで過去方向へ探索
+   for(int j = startIndex + 1; j < bufferSize; j++)
+   {
+      if(buffer[j] != 0.0)
+      {
+         return(buffer[j]); // 最初に見つかった非ゼロ値を返す
+      }
+   }
+   return(0.0); // 見つからなければ0.0を返す
+}
+
+//+------------------------------------------------------------------+
+//| ヘルパー関数：指定インデックスより未来(インデックス小)の非ゼロ値を探す |
+//+------------------------------------------------------------------+
+double FindNextNonZeroValue(int startIndex, const double &buffer[])
+{
+   // startIndex-1 から 0 まで未来方向へ探索
+   for(int j = startIndex - 1; j >= 0; j--)
+   {
+      if(buffer[j] != 0.0)
+      {
+         return(buffer[j]); // 最初に見つかった非ゼロ値を返す
+      }
+   }
+   return(0.0); // 見つからなければ0.0を返す
+}
+
 // 直近のZigZagポイント（高値/安値）を探す
 bool FindRecentZigZagPoint(string symbol, int timeframe, int direction, double &zzPoint, datetime &zzTime)
 {
-    // ZigZagバッファの配列
-    double zigzagBuffer[];
-    datetime timeBuffer[];
-    
-    // 配列サイズを設定
-    ArrayResize(zigzagBuffer, ZigZagMaxLookback);
-    ArrayResize(timeBuffer, ZigZagMaxLookback);
-    ArrayInitialize(zigzagBuffer, 0.0);
-    
-    // ZigZagの計算
-    int handle = (int)iCustom(symbol, timeframe, "ZigZag", ZigZagDepth, ZigZagDeviation, ZigZagBackstep);
-    
-    if(handle == INVALID_HANDLE)
-    {
-        LogError("ZigZagインジケーターのハンドルを取得できませんでした。エラー: " + IntegerToString(GetLastError()));
-        return false;
-    }
-    
-    // 時間配列を作成
-    for(int i = 0; i < ZigZagMaxLookback; i++)
-    {
-        timeBuffer[i] = iTime(symbol, timeframe, i);
-        
-        // ZigZagの値を取得（バッファ0がZigZag値）
-        double value = iCustom(symbol, timeframe, "ZigZag", ZigZagDepth, ZigZagDeviation, ZigZagBackstep, 0, i);
-        zigzagBuffer[i] = value;
-    }
-    
-    // 方向に合わせて適切なZigZagポイントを探す
-    if(direction > 0) // ロング（買い）の場合は直近の安値（Trough）を探す
-    {
-        for(int i = 1; i < ZigZagMaxLookback - 1; i++)
-        {
-            // ZigZagの値が0でなく、両隣の値より小さい場合は安値と判断
-            if(zigzagBuffer[i] != 0 && 
-               (zigzagBuffer[i-1] == 0 || zigzagBuffer[i] < zigzagBuffer[i-1]) && 
-               (zigzagBuffer[i+1] == 0 || zigzagBuffer[i] < zigzagBuffer[i+1]))
+   // ZigZagバッファの配列
+   double zigzagBuffer[];
+   datetime timeBuffer[];
+
+   // 配列サイズをチェック＆設定
+   if(ZigZagMaxLookback <= 0)
+   {
+      LogError("ZigZagMaxLookback の値が無効です: " + IntegerToString(ZigZagMaxLookback));
+      return false;
+   }
+   
+   ArrayResize(zigzagBuffer, ZigZagMaxLookback);
+   ArrayResize(timeBuffer, ZigZagMaxLookback);
+   ArrayInitialize(zigzagBuffer, 0.0);
+
+   // 利用可能なバー数をチェック
+   int available_bars = Bars(symbol, timeframe);
+   if(available_bars < ZigZagMaxLookback)
+   {
+      LogWarning("利用可能なバーが不足しています。 RatesTotal=" + (string)available_bars + ", Required="+(string)ZigZagMaxLookback);
+      ArrayResize(zigzagBuffer, available_bars);
+      ArrayResize(timeBuffer, available_bars);
+      if (available_bars <= 2) return false; // 比較に必要な最低限のバーもない場合
+   }
+
+   // データ取得 - MQL4スタイル（CopyBufferではなくiCustomを使用）
+   for(int i = 0; i < ArraySize(zigzagBuffer); i++)
+   {
+      // 時間配列を作成
+      timeBuffer[i] = iTime(symbol, timeframe, i);
+      
+      // ZigZagの値を取得（バッファ0がZigZag値）
+      zigzagBuffer[i] = iCustom(symbol, timeframe, "ZigZag", ZigZagDepth, ZigZagDeviation, ZigZagBackstep, 0, i);
+   }
+
+   // --- 判定ロジック ---
+   // ループ範囲: i=1 から 配列サイズ-2 まで (両隣の転換点を比較するため)
+   for(int i = 1; i < ArraySize(zigzagBuffer) - 1; i++)
+   {
+      // 現在のバー(i)が転換点か？
+      if(zigzagBuffer[i] != 0.0)
+      {
+         // 前（過去方向、インデックス大）の転換点を探す
+         double prevZZ = FindPreviousNonZeroValue(i, zigzagBuffer, ArraySize(zigzagBuffer));
+         // 次（未来方向、インデックス小）の転換点を探す
+         double nextZZ = FindNextNonZeroValue(i, zigzagBuffer);
+
+         // --- ロング（安値 Trough）を探す場合 ---
+         if(direction > 0)
+         {
+            // 前後の転換点が存在し、現在の点(i)が両方より低いか？
+            if(prevZZ > 0.0 && nextZZ > 0.0 && zigzagBuffer[i] < prevZZ && zigzagBuffer[i] < nextZZ)
             {
-                zzPoint = zigzagBuffer[i];
-                zzTime = timeBuffer[i];
-                
-                LogInfo("ロング用ZigZag安値検出: 価格=" + DoubleToString(zzPoint, Digits) + 
-                       ", 時間=" + TimeToString(zzTime, TIME_DATE|TIME_MINUTES));
-                
-                return true;
+               zzPoint = zigzagBuffer[i];
+               zzTime = timeBuffer[i];
+               LogInfo("ロング用ZigZag安値検出: 価格=" + DoubleToString(zzPoint, Digits) +
+                      ", 時間=" + TimeToString(zzTime, TIME_DATE|TIME_MINUTES) + " (Index=" + IntegerToString(i) + ")");
+               return true; // 最初に見つかったものを返す
             }
-        }
-    }
-    else // ショート（売り）の場合は直近の高値（Peak）を探す
-    {
-        for(int i = 1; i < ZigZagMaxLookback - 1; i++)
-        {
-            // ZigZagの値が0でなく、両隣の値より大きい場合は高値と判断
-            if(zigzagBuffer[i] != 0 && 
-               (zigzagBuffer[i-1] == 0 || zigzagBuffer[i] > zigzagBuffer[i-1]) && 
-               (zigzagBuffer[i+1] == 0 || zigzagBuffer[i] > zigzagBuffer[i+1]))
+         }
+         // --- ショート（高値 Peak）を探す場合 ---
+         else // direction <= 0
+         {
+            // 前後の転換点が存在し、現在の点(i)が両方より高いか？
+            if(prevZZ > 0.0 && nextZZ > 0.0 && zigzagBuffer[i] > prevZZ && zigzagBuffer[i] > nextZZ)
             {
-                zzPoint = zigzagBuffer[i];
-                zzTime = timeBuffer[i];
-                
-                LogInfo("ショート用ZigZag高値検出: 価格=" + DoubleToString(zzPoint, Digits) + 
-                       ", 時間=" + TimeToString(zzTime, TIME_DATE|TIME_MINUTES));
-                
-                return true;
+               zzPoint = zigzagBuffer[i];
+               zzTime = timeBuffer[i];
+               LogInfo("ショート用ZigZag高値検出: 価格=" + DoubleToString(zzPoint, Digits) +
+                      ", 時間=" + TimeToString(zzTime, TIME_DATE|TIME_MINUTES) + " (Index=" + IntegerToString(i) + ")");
+               return true; // 最初に見つかったものを返す
             }
-        }
-    }
-    
-    // 見つからなかった場合
-    LogWarning("適切なZigZagポイントが" + IntegerToString(ZigZagMaxLookback) + "バー以内に見つかりませんでした。");
-    return false;
+         }
+      }
+   }
+
+   // 見つからなかった場合
+   LogWarning("適切なZigZagポイントが指定範囲内に見つかりませんでした。 Lookback=" + IntegerToString(ArraySize(zigzagBuffer)));
+   return false;
 }
 
 //+------------------------------------------------------------------+
